@@ -1,0 +1,13 @@
+<!doctype html>
+<html><head><meta charset='utf-8'/><meta name='viewport' content='width=device-width, initial-scale=1.0'/>
+<title>The ARK — Voice Bot</title>
+<style>
+:root{--bg:#0A192F;--card:#0f2246;--stroke:#14335f;--text:#E6F1FF;--accent:#FF4C29;--teal:#64FFDA}
+html,body{height:100%}body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,Arial}
+.wrap{max-width:980px;margin:40px auto;padding:24px}.card{background:var(--card);border:1px solid var(--stroke);border-radius:16px;padding:24px;box-shadow:0 10px 40px rgba(0,0,0,.35)}
+.row{display:flex;gap:16px;align-items:center;flex-wrap:wrap}.brand{display:flex;align-items:center;gap:12px}.brand img{width:40px;height:40px;border-radius:8px}
+.title{font-size:28px;font-weight:800;letter-spacing:.3px}.subtitle{opacity:.9}.mic{width:80px;height:80px;border-radius:50%;display:grid;place-items:center;font-size:26px;background:var(--accent);color:#fff;border:0;cursor:pointer;transition:transform .06s}
+.mic:active{transform:scale(.98)}.mic.recording{background:#ef4444}.pill{padding:7px 12px;border-radius:999px;background:#0c2144;border:1px solid #1b3f78;font-weight:600;color:var(--teal)}
+select,button{border-radius:10px;padding:10px 12px;background:#0c2144;color:var(--text);border:1px solid #1b3f78;font-weight:600}button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.log{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;background:#08152e;border:1px solid #112b55;border-radius:12px;padding:10px;height:200px;overflow:auto}.footer{opacity:.75;font-size:12px;margin-top:8px}
+</style></head><body><div id='root'></div><script type='module' src='/src/main.jsx'></script></body></html>

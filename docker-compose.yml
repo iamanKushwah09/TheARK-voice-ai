@@ -1,0 +1,15 @@
+version: '3.9'
+services:
+  server:
+    build: ./server
+    environment:
+      - PORT=8080
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GEMINI_MODEL=${GEMINI_MODEL}
+      - GEMINI_REGION=${GEMINI_REGION}
+      - GEMINI_LIVE_WS_URL=${GEMINI_LIVE_WS_URL}
+    ports: ["8080:8080"]
+  client:
+    build: ./client
+    ports: ["5173:80"]
+    depends_on: [server]
