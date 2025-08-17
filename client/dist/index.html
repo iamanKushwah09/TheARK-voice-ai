@@ -1,0 +1,458 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Futuristic Realtime Console</title>
+
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Orbitron:wght@500;700&display=swap" rel="stylesheet">
+
+  <!-- Tailwind (CDN) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'ui-sans-serif', 'system-ui'],
+            display: ['Orbitron', 'Inter', 'ui-sans-serif'],
+          },
+          colors: {
+            base: '#0b0f17',
+            panel: 'rgba(255,255,255,0.06)',
+            stroke: 'rgba(255,255,255,0.12)',
+            neon: '#00FFD1',
+            electric: '#7C5CFF',
+            magenta: '#FF4ECD',
+            amber: '#FFC857',
+          },
+          boxShadow: {
+            glow: '0 0 30px rgba(0,255,209,0.25), 0 0 60px rgba(124,92,255,0.18)',
+            'inner-glow': 'inset 0 0 40px rgba(0,255,209,0.08)',
+          },
+          keyframes: {
+            float: { '0%,100%': { transform: 'translateY(0px)' }, '50%': { transform: 'translateY(-6px)' } },
+            pulseRing: { '0%': { boxShadow: '0 0 0 0 rgba(0,255,209,0.35)' }, '70%': { boxShadow: '0 0 0 20px rgba(0,255,209,0)' }, '100%': { boxShadow: '0 0 0 0 rgba(0,255,209,0)' } },
+            shine: { '0%': { transform: 'translateX(-120%)' }, '100%': { transform: 'translateX(120%)' } },
+            toastIn: { '0%': { transform: 'translateY(8px)', opacity: 0 }, '100%': { transform: 'translateY(0)', opacity: 1 } },
+            toastOut: { '0%': { opacity: 1 }, '100%': { opacity: 0 } },
+          },
+          animation: {
+            float: 'float 6s ease-in-out infinite',
+            pulseRing: 'pulseRing 2s ease-out infinite',
+            shine: 'shine 2s linear infinite',
+            toastIn: 'toastIn 280ms ease-out',
+            toastOut: 'toastOut 220ms ease-in forwards',
+          },
+        }
+      }
+    }
+  </script>
+
+  <!-- Background grid and glow -->
+  <style>
+    :root { --line: rgba(255,255,255,0.06); --line2: rgba(0,255,209,0.06); }
+    .bg-grid {
+      background-image:
+        linear-gradient(var(--line) 1px, transparent 1px),
+        linear-gradient(90deg, var(--line) 1px, transparent 1px);
+      background-size: 48px 48px, 48px 48px;
+      background-position: 0 0, 0 0;
+      will-change: background-position;
+      animation: gridShift 40s linear infinite;
+      mask-image: radial-gradient(ellipse at center, black 40%, transparent 85%);
+      -webkit-mask-image: radial-gradient(ellipse at center, black 40%, transparent 85%);
+    }
+    @keyframes gridShift {
+      0% { background-position: 0 0, 0 0; }
+      100% { background-position: 0 1200px, 1200px 0; }
+    }
+    .tilt {
+      transition: transform 200ms ease, box-shadow 200ms ease, border-color 200ms ease;
+      transform-style: preserve-3d;
+    }
+    .tilt:hover { box-shadow: 0 8px 40px rgba(0,255,209,0.15), 0 10px 50px rgba(124,92,255,0.12); }
+    .glass {
+      background: linear-gradient(to bottom right, rgba(255,255,255,0.08), rgba(255,255,255,0.04));
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255,255,255,0.12);
+    }
+    .gradient-border {
+      position: relative;
+      border-radius: 14px;
+    }
+    .gradient-border::before {
+      content: "";
+      position: absolute; inset: -1px;
+      border-radius: 16px;
+      padding: 1px;
+      background: linear-gradient(135deg, rgba(0,255,209,0.4), rgba(124,92,255,0.4), rgba(255,78,205,0.35));
+      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      -webkit-mask-composite: xor; mask-composite: exclude;
+      opacity: .7;
+      pointer-events: none;
+    }
+    .shimmer {
+      position: relative; overflow: hidden;
+    }
+    .shimmer::after {
+      content: "";
+      position: absolute; inset: 0;
+      transform: translateX(-120%);
+      background: linear-gradient(120deg, transparent 0%, rgba(255,255,255,.08) 40%, rgba(255,255,255,.18) 50%, rgba(255,255,255,.08) 60%, transparent 100%);
+      animation: shine 3.2s linear infinite;
+      pointer-events: none;
+    }
+  </style>
+</head>
+
+<body class="min-h-screen bg-base text-white antialiased">
+  <!-- Animated layers -->
+  <div class="fixed inset-0 -z-20">
+    <div class="absolute inset-0 bg-[radial-gradient(circle_at_20%_10%,rgba(124,92,255,0.25),transparent_40%),radial-gradient(circle_at_80%_20%,rgba(0,255,209,0.25),transparent_35%),radial-gradient(circle_at_50%_80%,rgba(255,78,205,0.2),transparent_40%)]"></div>
+    <div class="absolute inset-0 bg-grid"></div>
+    <div class="absolute inset-x-0 bottom-[-60%] h-[120%] blur-[80px] bg-gradient-to-tr from-electric/20 via-neon/20 to-magenta/20"></div>
+  </div>
+
+  <!-- Toasts -->
+  <div id="toasts" class="fixed top-4 right-4 z-50 space-y-3"></div>
+
+  <!-- Header -->
+  <header class="relative z-10 max-w-7xl mx-auto px-6 pt-8 flex items-center justify-between">
+    <div class="flex items-center gap-4">
+      <div class="size-10 rounded-lg bg-gradient-to-br from-neon/20 to-electric/20 border border-white/10 flex items-center justify-center shadow-glow">
+        <svg class="size-6 text-neon" viewBox="0 0 24 24" fill="none"><path d="M12 3l7 4v10l-7 4-7-4V7l7-4z" stroke="currentColor" stroke-width="1.5"/></svg>
+      </div>
+      <div>
+        <h1 class="font-display text-xl tracking-widest">REALTIME CONSOLE</h1>
+        <p class="text-white/60 text-sm">Futuristic UI • WebSocket live feed</p>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-3">
+      <span id="statusDot" class="relative flex h-3 w-3">
+        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-40"></span>
+        <span class="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+      </span>
+      <span id="statusText" class="text-sm text-white/80">Disconnected</span>
+    </div>
+  </header>
+
+  <!-- Main -->
+  <main class="relative z-10 max-w-7xl mx-auto px-6 pb-16">
+    <!-- Hero -->
+    <section class="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <!-- Connection Panel -->
+      <div class="lg:col-span-2 glass gradient-border tilt rounded-2xl p-6 shadow-inner-glow" id="panel">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="font-display tracking-wider text-lg">Connection</h2>
+          <div class="flex items-center gap-2">
+            <button id="connectBtn" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-neon/10 hover:bg-neon/20 text-neon border border-neon/30 transition-colors">
+              <span class="size-2 rounded-full bg-neon"></span> Connect
+            </button>
+            <button id="disconnectBtn" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-white/90 border border-white/10 transition-colors" disabled>
+              Disconnect
+            </button>
+          </div>
+        </div>
+
+        <div class="grid md:grid-cols-[1fr_auto] gap-3 items-center">
+          <label class="text-sm text-white/70" for="endpoint">Endpoint</label>
+          <span class="justify-self-end text-xs text-white/50">WSS</span>
+          <input id="endpoint" class="md:col-span-2 w-full rounded-lg bg-black/30 border border-white/10 focus:border-neon/40 focus:ring-2 focus:ring-neon/20 px-3 py-2 font-mono text-sm text-white/90" value="wss://theark-voice-ai.onrender.com/ws" />
+        </div>
+
+        <div class="mt-4 grid sm:grid-cols-3 gap-3">
+          <div class="p-3 rounded-xl bg-black/30 border border-white/10">
+            <p class="text-xs text-white/60">Latency</p>
+            <p id="latency" class="font-semibold">—</p>
+          </div>
+          <div class="p-3 rounded-xl bg-black/30 border border-white/10">
+            <p class="text-xs text-white/60">Messages</p>
+            <p id="msgCount" class="font-semibold">0</p>
+          </div>
+          <div class="p-3 rounded-xl bg-black/30 border border-white/10">
+            <p class="text-xs text-white/60">Uptime</p>
+            <p id="uptime" class="font-semibold">—</p>
+          </div>
+        </div>
+
+        <div class="mt-6 shimmer rounded-xl border border-white/10 overflow-hidden">
+          <div class="bg-gradient-to-r from-electric/10 via-neon/10 to-magenta/10 px-4 py-3 text-sm text-white/80">
+            Tip: some servers only respond after you send a HELLO event.
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Card -->
+      <div class="glass gradient-border tilt rounded-2xl p-6 flex flex-col justify-between">
+        <div>
+          <h3 class="font-display tracking-wider text-lg mb-2">Quick actions</h3>
+          <p class="text-white/70 text-sm">Send a sample payload, toggle autoconnect, and clear logs.</p>
+        </div>
+
+        <div class="mt-4 space-y-3">
+          <button id="sendHello" class="w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-electric/20 hover:bg-electric/30 text-white border border-electric/40 transition-colors">
+            Send HELLO
+          </button>
+          <label class="flex items-center justify-between gap-3 p-3 rounded-lg bg-black/30 border border-white/10 cursor-pointer">
+            <span class="text-sm text-white/80">Autoconnect on load</span>
+            <input id="autoConnect" type="checkbox" class="size-5 accent-neon" checked />
+          </label>
+          <button id="clearLog" class="w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-white/90 border border-white/10 transition-colors">
+            Clear log
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Logs + Sender -->
+    <section class="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div class="lg:col-span-2 glass gradient-border rounded-2xl p-0 overflow-hidden">
+        <div class="px-6 py-4 flex items-center justify-between">
+          <h3 class="font-display tracking-wider text-lg">Messages</h3>
+          <div class="flex items-center gap-2 text-xs text-white/60">
+            <span class="inline-block size-2 rounded-full bg-neon"></span> inbound
+            <span class="inline-block size-2 rounded-full bg-amber"></span> outbound
+            <span class="inline-block size-2 rounded-full bg-red-400"></span> errors
+          </div>
+        </div>
+        <div id="log" class="h-[340px] overflow-auto border-t border-white/10 bg-black/20">
+          <!-- log rows injected here -->
+        </div>
+      </div>
+
+      <div class="glass gradient-border rounded-2xl p-6">
+        <h3 class="font-display tracking-wider text-lg mb-3">Send message</h3>
+        <textarea id="payload" class="w-full h-40 rounded-lg bg-black/30 border border-white/10 focus:border-neon/40 focus:ring-2 focus:ring-neon/20 px-3 py-2 font-mono text-sm text-white/90" placeholder='{"type":"HELLO","data":"Ping"}'></textarea>
+        <button id="sendBtn" class="mt-3 w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-neon/20 hover:bg-neon/30 text-neon border border-neon/40 transition-colors disabled:opacity-40 disabled:cursor-not-allowed" disabled>
+          Send
+        </button>
+      </div>
+    </section>
+
+    <!-- Mic / CTA -->
+    <section class="mt-8 grid place-items-center">
+      <button id="micBtn" class="relative group size-28 rounded-full bg-gradient-to-br from-neon/20 to-electric/20 border border-white/10 flex items-center justify-center shadow-glow hover:shadow-[0_0_0_12px_rgba(0,255,209,0.08)] transition-all">
+        <span class="absolute inset-0 rounded-full animate-pulseRing"></span>
+        <svg class="size-10 text-white/90 group-hover:text-neon transition-colors" viewBox="0 0 24 24" fill="none">
+          <path d="M12 3a3 3 0 0 1 3 3v6a3 3 0 1 1-6 0V6a3 3 0 0 1 3-3z" stroke="currentColor" stroke-width="1.5"/>
+          <path d="M5 11a7 7 0 0 0 14 0M12 18v3" stroke="currentColor" stroke-width="1.5"/>
+        </svg>
+      </button>
+      <p class="mt-3 text-sm text-white/60">Mic is a visual placeholder. Wire it to your audio flow later.</p>
+    </section>
+  </main>
+
+  <script>
+    // State
+    let socket = null;
+    let msgCount = 0;
+    let connectedAt = null;
+    let latencySampleStart = null;
+    const el = {
+      statusDot: document.getElementById('statusDot'),
+      statusText: document.getElementById('statusText'),
+      connectBtn: document.getElementById('connectBtn'),
+      disconnectBtn: document.getElementById('disconnectBtn'),
+      endpoint: document.getElementById('endpoint'),
+      latency: document.getElementById('latency'),
+      msgCount: document.getElementById('msgCount'),
+      uptime: document.getElementById('uptime'),
+      log: document.getElementById('log'),
+      payload: document.getElementById('payload'),
+      sendBtn: document.getElementById('sendBtn'),
+      sendHello: document.getElementById('sendHello'),
+      clearLog: document.getElementById('clearLog'),
+      autoConnect: document.getElementById('autoConnect'),
+      toasts: document.getElementById('toasts'),
+      panel: document.getElementById('panel'),
+    };
+
+    // Persist endpoint + autoconnect
+    const savedEndpoint = localStorage.getItem('endpoint');
+    if (savedEndpoint) el.endpoint.value = savedEndpoint;
+    const savedAuto = localStorage.getItem('autoConnect');
+    if (savedAuto !== null) el.autoConnect.checked = savedAuto === 'true';
+    el.endpoint.addEventListener('change', () => localStorage.setItem('endpoint', el.endpoint.value));
+    el.autoConnect.addEventListener('change', () => localStorage.setItem('autoConnect', el.autoConnect.checked));
+
+    // UI helpers
+    function setStatus(connected) {
+      el.statusText.textContent = connected ? 'Connected' : 'Disconnected';
+      const dot = el.statusDot.querySelector('span.relative');
+      const ping = el.statusDot.querySelector('.animate-ping');
+      dot.classList.toggle('bg-green-500', connected);
+      ping.classList.toggle('bg-green-400', connected);
+      dot.classList.toggle('bg-red-500', !connected);
+      ping.classList.toggle('bg-red-400', !connected);
+      el.connectBtn.disabled = connected;
+      el.disconnectBtn.disabled = !connected;
+      el.sendBtn.disabled = !connected;
+    }
+
+    function addLog({ dir = 'in', text = '', error = false }) {
+      const row = document.createElement('div');
+      row.className = 'px-4 py-2 text-sm border-b border-white/5 flex items-start gap-3';
+      const dot = document.createElement('span');
+      dot.className = 'mt-1 size-2 rounded-full ' + (error ? 'bg-red-400' : dir === 'in' ? 'bg-neon' : 'bg-amber');
+      const body = document.createElement('div');
+      const time = new Date().toLocaleTimeString();
+      body.innerHTML = '<div class="text-white/50 text-xs">'+ time +'</div><pre class="whitespace-pre-wrap break-words font-mono text-white/90">'+ text +'</pre>';
+      row.appendChild(dot); row.appendChild(body);
+      el.log.appendChild(row);
+      el.log.scrollTop = el.log.scrollHeight;
+    }
+
+    function toast(msg, variant = 'info') {
+      const t = document.createElement('div');
+      const color = variant === 'error' ? 'from-red-500/15 to-red-400/10 border-red-500/30'
+                    : variant === 'success' ? 'from-green-500/15 to-green-400/10 border-green-500/30'
+                    : 'from-electric/15 to-neon/10 border-white/15';
+      t.className = 'glass rounded-xl border px-4 py-3 text-sm text-white/90 animate-toastIn shadow-glow bg-gradient-to-br ' + color;
+      t.textContent = msg;
+      el.toasts.appendChild(t);
+      setTimeout(() => { t.classList.remove('animate-toastIn'); t.classList.add('animate-toastOut'); setTimeout(()=>t.remove(), 240); }, 2600);
+    }
+
+    function pretty(objOrStr) {
+      try { return JSON.stringify(typeof objOrStr === 'string' ? JSON.parse(objOrStr) : objOrStr, null, 2); }
+      catch { return String(objOrStr); }
+    }
+
+    // Tilt effect
+    (function attachTilt() {
+      const card = el.panel;
+      card.addEventListener('mousemove', (e) => {
+        const r = card.getBoundingClientRect();
+        const x = e.clientX - r.left, y = e.clientY - r.top;
+        const rx = ((y - r.height / 2) / r.height) * -6;
+        const ry = ((x - r.width / 2) / r.width) * 6;
+        card.style.transform = `perspective(800px) rotateX(${rx}deg) rotateY(${ry}deg)`;
+      });
+      card.addEventListener('mouseleave', () => { card.style.transform = 'perspective(800px) rotateX(0deg) rotateY(0deg)'; });
+    })();
+
+    // Uptime ticker
+    setInterval(() => {
+      if (connectedAt) {
+        const secs = Math.floor((Date.now() - connectedAt) / 1000);
+        const m = Math.floor(secs / 60), s = secs % 60;
+        el.uptime.textContent = `${m}m ${s}s`;
+      } else { el.uptime.textContent = '—'; }
+    }, 1000);
+
+    // Heartbeat latency (optional; only when connected)
+    let heartbeatTimer = null;
+    function startHeartbeat() {
+      stopHeartbeat();
+      heartbeatTimer = setInterval(() => {
+        if (!socket || socket.readyState !== 1) return;
+        latencySampleStart = performance.now();
+        try { socket.send(JSON.stringify({ type: 'PING', ts: Date.now() })); }
+        catch {}
+      }, 8000);
+    }
+    function stopHeartbeat() {
+      if (heartbeatTimer) clearInterval(heartbeatTimer);
+      heartbeatTimer = null;
+    }
+
+    // Connection handlers
+    function connect() {
+      const url = el.endpoint.value.trim();
+      if (!url) return toast('Provide a WebSocket endpoint', 'error');
+      try { new URL(url); } catch { return toast('Invalid URL', 'error'); }
+      localStorage.setItem('endpoint', url);
+
+      socket = new WebSocket(url);
+      socket.onopen = () => {
+        connectedAt = Date.now();
+        setStatus(true);
+        toast('Connected', 'success');
+        addLog({ dir: 'in', text: '🟢 Connected' });
+        // Optional initial hello
+        try { socket.send(JSON.stringify({ type: 'HELLO', client: 'Futuristic UI' })); addLog({ dir: 'out', text: pretty({ type: 'HELLO', client: 'Futuristic UI' }) }); } catch {}
+        startHeartbeat();
+      };
+      socket.onmessage = (ev) => {
+        msgCount += 1; el.msgCount.textContent = String(msgCount);
+        // If message is a PONG, compute latency
+        try {
+          const data = JSON.parse(ev.data);
+          if (data && (data.type === 'PONG' || data.type === 'PING')) {
+            if (latencySampleStart) {
+              const ms = Math.round(performance.now() - latencySampleStart);
+              el.latency.textContent = ms + ' ms';
+              latencySampleStart = null;
+            }
+          }
+        } catch {}
+        addLog({ dir: 'in', text: pretty(ev.data) });
+      };
+      socket.onerror = (err) => {
+        addLog({ dir: 'in', text: '❌ Error (see console)', error: true });
+        console.error('WS error', err);
+        toast('WebSocket error', 'error');
+      };
+      socket.onclose = (ev) => {
+        setStatus(false);
+        stopHeartbeat();
+        if (connectedAt) addLog({ dir: 'in', text: `🔴 Disconnected (code ${ev.code})` });
+        connectedAt = null;
+      };
+    }
+
+    function disconnect() {
+      if (socket && (socket.readyState === 0 || socket.readyState === 1)) {
+        socket.close(1000, 'Client closed');
+      }
+    }
+
+    function sendPayload(text) {
+      if (!socket || socket.readyState !== 1) return toast('Not connected', 'error');
+      try {
+        const parsed = JSON.parse(text);
+        socket.send(JSON.stringify(parsed));
+        addLog({ dir: 'out', text: pretty(parsed) });
+      } catch (e) {
+        // Send raw if not JSON
+        socket.send(text);
+        addLog({ dir: 'out', text: text });
+      }
+    }
+
+    // Wire UI
+    el.connectBtn.addEventListener('click', connect);
+    el.disconnectBtn.addEventListener('click', disconnect);
+    el.sendBtn.addEventListener('click', () => sendPayload(el.payload.value));
+    el.sendHello.addEventListener('click', () => {
+      const msg = { type: 'HELLO', client: 'Futuristic UI', at: new Date().toISOString() };
+      el.payload.value = JSON.stringify(msg, null, 2);
+      if (socket && socket.readyState === 1) sendPayload(el.payload.value);
+      else toast('Not connected — updated payload ready', 'info');
+    });
+    el.clearLog.addEventListener('click', () => { el.log.innerHTML = ''; msgCount = 0; el.msgCount.textContent = '0'; });
+
+    // Enable send when payload has content
+    el.payload.addEventListener('input', () => { el.sendBtn.disabled = !el.payload.value.trim() || !socket || socket.readyState !== 1; });
+
+    // Autoconnect
+    window.addEventListener('load', () => { if (el.autoConnect.checked) connect(); });
+
+    // Keyboard shortcuts
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault(); el.sendBtn.click();
+      }
+    });
+
+    // Mic placeholder
+    document.getElementById('micBtn').addEventListener('click', () => {
+      toast('Mic is a placeholder — wire to audio capture/stream later', 'info');
+    });
+  </script>
+</body>
+</html>
